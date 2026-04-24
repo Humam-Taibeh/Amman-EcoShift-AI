@@ -1,5 +1,4 @@
 import requests
-import json
 import time
 
 def run_test(run_number: int):
@@ -28,7 +27,7 @@ def run_test(run_number: int):
             print(f"Processed At (Amman Time): {processed_at}")
             print(f"Vehicle Type: {data.get('vehicle_type')}")
             print(f"Efficiency Score: {route.get('efficiency_score')}/100")
-            print(f"AI Insight: {route.get('ai_insight')}")
+            print(f"Master Tip: {route.get('master_tip')}")
             print("-" * 50)
             return elapsed
         else:

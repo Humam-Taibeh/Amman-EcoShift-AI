@@ -1,6 +1,7 @@
+from __future__ import annotations
 import os
 import google.generativeai as genai
-from typing import Dict, Any, List
+from typing import Any
 import json
 
 class RouteOptimizer:
@@ -12,9 +13,9 @@ class RouteOptimizer:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-flash-latest')
+        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
-    def _analyze_terrain(self, elevation_results: List[Dict]) -> Dict[str, float]:
+    def _analyze_terrain(self, elevation_results: list[dict[str, Any]]) -> dict[str, float]:
         """
         Calculates total ascent, descent, and elevation range.
         """
@@ -40,11 +41,11 @@ class RouteOptimizer:
 
     async def calculate_efficiency_score_ai(
         self, 
-        route_data: Dict[str, Any], 
-        elevation_data: List[Dict],
+        route_data: dict[str, Any], 
+        elevation_data: list[dict[str, Any]],
         vehicle_type: str = "GASOLINE",
         current_time: str = "Unknown"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Elite analysis with segment-specific Eco-Advisory.
         """

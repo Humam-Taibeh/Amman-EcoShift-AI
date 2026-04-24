@@ -1,6 +1,7 @@
+from __future__ import annotations
 import os
 import httpx
-from typing import Dict, Any, List
+from typing import Any
 import logging
 
 # Setup logging
@@ -22,13 +23,13 @@ class MapService:
             "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.routeLabels,routes.polyline"
         }
 
-    async def get_elevation_data(self, points: str) -> Dict[str, Any]:
+    async def get_elevation_data(self, points: str) -> dict[str, Any]:
         """
         Fetches elevation for a path/polyline.
         """
         params = {
             "path": f"enc:{points}",
-            "samples": 10,  # Sample 10 points along the route
+            "samples": 30,  # Sample 30 points along the route for better charts
             "key": self.api_key
         }
         async with httpx.AsyncClient() as client:
@@ -41,7 +42,7 @@ class MapService:
         origin_lat: float, origin_lng: float, 
         dest_lat: float, dest_lng: float,
         vehicle_type: str = "GASOLINE"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Fetches routes from Google Maps with error handling.
         """

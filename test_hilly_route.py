@@ -1,5 +1,4 @@
 import requests
-import json
 import time
 
 def run_terrain_test(vehicle_type: str):
