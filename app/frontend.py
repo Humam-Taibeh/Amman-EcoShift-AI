@@ -1,8 +1,6 @@
 """
-Eco-Shift AI Precision Navigator Dashboard.
-Handles UI layout, map rendering, and backend interaction.
+Eco-Shift AI Masterpiece UI.
 """
-
 import time
 import requests
 import textwrap
@@ -21,545 +19,484 @@ LOCATIONS = {
 }
 
 def get_coords(location_name: str) -> tuple[float, float]:
-    """Return coordinates for a given location string."""
     return LOCATIONS.get(location_name, LOCATIONS["Default"])
 
 def inject_global_css():
     css = textwrap.dedent("""
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@600;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        /* Hide all standard Streamlit elements */
+        /* Base Resets */
         header {visibility: hidden !important;}
         footer {visibility: hidden !important;}
         .stDeployButton {display:none !important;}
         [data-testid="stToolbar"] {visibility: hidden !important;}
+        [data-testid="block-container"] { padding: 0 !important; max-width: 100% !important; }
         
-        /* Global Reset & Background */
         .stApp {
-            background: radial-gradient(circle at center, #0B1120 0%, #020617 100%) !important;
-            background-attachment: fixed !important;
+            background-color: #020617 !important;
             color: #f8fafc;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
-            z-index: 1;
+            overflow-y: hidden; /* Prevent scrolling if possible */
         }
 
-        /* Bokeh/Particle Effects */
+        /* Topography Background */
         .stApp::before {
             content: '';
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.06) 0%, transparent 40%);
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.05) 0%, transparent 60%),
+                repeating-radial-gradient(circle at 50% 50%, transparent 0, transparent 40px, rgba(0, 255, 255, 0.03) 41px, transparent 42px);
             z-index: -1;
             pointer-events: none;
-            animation: pulseBg 8s infinite alternate ease-in-out;
+            animation: radarPulse 15s infinite linear;
         }
-
-        @keyframes pulseBg {
-            0% { opacity: 0.6; transform: scale(1); }
-            100% { opacity: 1; transform: scale(1.05); }
+        
+        @keyframes radarPulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0.5; }
         }
 
         /* Typography */
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Syne', sans-serif !important;
-            letter-spacing: -0.02em;
-        }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif !important; }
+        .mono-text { font-family: 'IBM Plex Mono', monospace !important; }
         
-        p, span, div {
-            font-family: 'Inter', sans-serif !important;
-        }
-
-        .gradient-heading {
+        .heading-dynamic {
             font-family: 'Syne', sans-serif !important;
             font-weight: 800 !important;
-            background: linear-gradient(90deg, #FFFFFF 0%, #60A5FA 100%);
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #00ffff 0%, #ccff00 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.4));
+            margin-bottom: 0.2rem;
+            line-height: 1.1;
         }
 
-        /* Sidebar Customization */
+        /* Sidebar */
         [data-testid="stSidebar"] {
-            background-color: rgba(2, 6, 23, 0.6) !important;
-            backdrop-filter: blur(20px) !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+            background-color: rgba(2, 6, 23, 0.8) !important;
+            backdrop-filter: blur(24px) !important;
+            border-right: 1px solid rgba(0, 255, 255, 0.15) !important;
         }
 
-        /* Input Fields (Sleek & Glowing) */
+        /* Inputs */
         .stTextInput input, .stSelectbox > div > div {
-            background-color: rgba(255,255,255,0.02) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 8px !important;
-            color: #ffffff !important;
-            padding: 10px 16px !important;
-            font-size: 0.9rem !important;
-            font-weight: 300 !important;
+            background-color: rgba(0, 255, 255, 0.02) !important;
+            border: 1px solid rgba(0, 255, 255, 0.2) !important;
+            border-radius: 4px !important;
+            color: #00ffff !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+            font-size: 0.85rem !important;
+            padding: 8px 12px !important;
             transition: all 0.3s ease !important;
-            box-shadow: none !important;
+            min-height: 40px !important;
+            height: 40px !important;
         }
         
         .stTextInput input:focus, .stSelectbox > div > div:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3) !important;
-            background-color: rgba(59, 130, 246, 0.05) !important;
+            background-color: rgba(0, 255, 255, 0.08) !important;
+            border-color: #00ffff !important;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3) !important;
+            transform: scaleX(1.02);
         }
 
-        .stTextInput label, .stSelectbox label {
-            font-size: 0.75rem !important;
+        .stTextInput label p, .stSelectbox label p {
+            font-family: 'IBM Plex Mono', monospace !important;
+            font-size: 0.7rem !important;
+            color: #00ffff !important;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.3rem !important;
+        }
+
+        /* Buttons */
+        button[data-testid="baseButton-primary"] {
+            background: transparent !important;
+            color: #ccff00 !important;
+            border: 1px solid #ccff00 !important;
+            border-radius: 4px !important;
+            font-family: 'IBM Plex Mono', monospace !important;
             font-weight: 600 !important;
             text-transform: uppercase !important;
             letter-spacing: 0.05em !important;
-            color: rgba(255, 255, 255, 0.6) !important;
-            margin-bottom: 0.25rem !important;
+            height: 45px !important;
+            min-height: 45px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 0 10px rgba(204, 255, 0, 0.2), inset 0 0 10px rgba(204, 255, 0, 0.1) !important;
         }
 
-        /* Buttons (High-Contrast Action) */
-        .stButton > button {
-            background: #2563EB !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-            padding: 0.75rem 2rem !important;
-            font-family: 'Syne', sans-serif !important;
-            font-weight: 700 !important;
-            letter-spacing: 0.03em !important;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-            width: 100% !important;
-            text-transform: none !important;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+        button[data-testid="baseButton-primary"]:hover {
+            background: rgba(204, 255, 0, 0.15) !important;
+            box-shadow: 0 0 20px rgba(204, 255, 0, 0.5), inset 0 0 15px rgba(204, 255, 0, 0.3) !important;
+            text-shadow: 0 0 8px #ccff00;
         }
 
-        .stButton > button:hover {
-            background: linear-gradient(90deg, #3B82F6 0%, #60A5FA 100%) !important;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.6) !important;
-            border: none !important;
+        button[data-testid="baseButton-secondary"] {
+            background: rgba(0, 255, 255, 0.05) !important;
+            color: #00ffff !important;
+            border: 1px solid rgba(0, 255, 255, 0.3) !important;
+            border-radius: 4px !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+            font-weight: 600 !important;
+            height: 45px !important;
+            min-height: 45px !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        button[data-testid="baseButton-secondary"]:hover {
+            background: rgba(0, 255, 255, 0.15) !important;
+            border-color: #00ffff !important;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) !important;
         }
 
-        /* Specific Button styles for Login */
-        .btn-google > button {
-            background: rgba(255,255,255,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            box-shadow: none !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .btn-google > button:hover {
-            background: rgba(255,255,255,0.1) !important;
-            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1) !important;
-        }
-
-        /* Status Pills */
-        .status-pill-container {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 20px;
-            border-radius: 9999px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #94a3b8;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-
-        .status-pill:hover, .status-pill.active {
-            border-color: rgba(59, 130, 246, 0.4);
-            color: #ffffff;
-            background: rgba(59, 130, 246, 0.1);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
-        }
-
-        /* Elegant Containers / Cards */
-        .premium-card {
-            background: rgba(2, 6, 23, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
+        /* Glass Cards */
+        .glass-card {
+            background: rgba(2, 6, 23, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 1rem;
-            backdrop-filter: blur(12px);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(0, 255, 255, 0.1);
+            transition: transform 0.3s ease, border-color 0.3s ease;
         }
-
-        .premium-card:hover {
+        
+        .glass-card:hover {
+            border-color: rgba(204, 255, 0, 0.4);
             transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(204, 255, 0, 0.2);
         }
 
-        /* Map & Visualization */
-        .visual-wrapper {
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Animations */
-        .animate-fade-in {
-            animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        .animate-slide-up {
-            animation: slideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        /* Boot-up */
+        .system-boot {
+            animation: bootUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             opacity: 0;
-            transform: translateY(30px);
+        }
+        @keyframes bootUp {
+            0% { opacity: 0; filter: blur(10px) brightness(2); transform: scale(0.95); }
+            100% { opacity: 1; filter: blur(0) brightness(1); transform: scale(1); }
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        /* Neural loader */
+        .neural-link-loader {
+            display: inline-block;
+            font-family: 'IBM Plex Mono', monospace;
+            color: #ccff00;
+            font-size: 1.2rem;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 10px #ccff00;
+            animation: blinker 1.5s linear infinite;
         }
-
-        @keyframes slideUp {
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes blinker { 50% { opacity: 0.3; text-shadow: none; } }
+        
+        /* Floating Overlay Hack */
+        div[data-testid="stVerticalBlock"]:has(#glass-overlay) {
+            position: absolute !important;
+            top: 20px !important;
+            right: 20px !important;
+            width: 380px !important;
+            z-index: 9999 !important;
+            background: transparent !important;
+            pointer-events: none; /* Let clicks pass through empty space */
         }
-
-        /* Neural Link Glow (Main View) */
-        .neural-glow {
-            position: relative;
+        
+        div[data-testid="stVerticalBlock"]:has(#glass-overlay) > * {
+            pointer-events: auto; /* Re-enable clicks for cards */
         }
-        .neural-glow::before {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 105%; height: 105%;
-            background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
-            z-index: -1;
+        
+        div[data-testid="stVerticalBlock"]:has(#floating-heading) {
+            position: absolute !important;
+            top: 20px !important;
+            left: 20px !important;
+            width: 500px !important;
+            z-index: 9999 !important;
+            background: transparent !important;
             pointer-events: none;
-            animation: neuralPulse 4s infinite alternate;
         }
-        @keyframes neuralPulse {
-            0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.95); }
-            100% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+        div[data-testid="stVerticalBlock"]:has(#floating-heading) > * {
+            pointer-events: auto;
         }
-        
-        .loading-pulse {
-            text-align: center;
-            font-family: 'Syne', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, #3B82F6, #FFFFFF, #3B82F6);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: loadingGlow 2s linear infinite;
-            margin-top: 20vh;
+
+        /* Map Fullscreen */
+        .full-map-wrapper iframe {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 1 !important;
         }
-        
-        @keyframes loadingGlow {
-            to { background-position: 200% center; }
+
+        /* No Red Errors */
+        .custom-alert {
+            background: rgba(2, 6, 23, 0.8);
+            border: 1px solid #ccff00;
+            padding: 1rem;
+            border-radius: 8px;
+            color: #ccff00;
+            font-family: 'IBM Plex Mono', monospace;
+            box-shadow: 0 0 15px rgba(204, 255, 0, 0.2);
+            margin-bottom: 1rem;
         }
     </style>
     """)
     st.markdown(css, unsafe_allow_html=True)
 
-
 def login_page():
-    """Renders the login UI mirroring the reference image."""
     st.markdown(textwrap.dedent("""
     <style>
         [data-testid="collapsedControl"] { display: none !important; }
         [data-testid="stSidebar"] { display: none !important; }
+        [data-testid="column"]:nth-child(1) { max-width: 420px !important; margin: 0 auto !important; }
     </style>
     """), unsafe_allow_html=True)
     
     st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
     
-    col_form, col_space, col_hero = st.columns([1, 0.2, 1.2])
+    col_form, col_space, col_hero = st.columns([1, 0.1, 1.2])
     
     with col_form:
         st.markdown(textwrap.dedent("""
-            <div class="animate-slide-up" style="max-width: 400px; margin: 0 auto;">
-                <h2 style="font-size: 2rem; margin-bottom: 0.5rem; color: #ffffff;">🚀 The Journey Begins Here</h2>
-                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 2.5rem; font-weight: 300;">Create your account and start your path to greatness.</p>
+            <div class="system-boot" style="margin-bottom: 2rem;">
+                <p class="mono-text" style="color: #00ffff; font-size: 0.8rem; margin-bottom: 0.2rem; letter-spacing: 0.1em;">// SECURE.AUTH</p>
+                <h2 style="font-size: 2.5rem; color: #ffffff; line-height: 1.1; margin-bottom: 0.5rem; font-family: 'Syne', sans-serif;">SYSTEM<br><span style="color: #ccff00;">ACCESS</span></h2>
             </div>
         """), unsafe_allow_html=True)
         
-        # We wrap inputs in a container to center them perfectly matching the 400px max-width
         with st.container():
-            st.markdown("<div style='max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
-            email = st.text_input("📧 Email address", placeholder="name@company.com")
-            password = st.text_input("🔒 Password", type="password", placeholder="••••••••")
+            st.markdown("<div class='system-boot' style='animation-delay: 0.2s;'>", unsafe_allow_html=True)
+            email = st.text_input("IDENTIFIER [EMAIL]", placeholder="sysadmin@eco-shift.ai")
+            password = st.text_input("SECURITY KEY [PASS]", type="password", placeholder="••••••••")
             
-            st.markdown(textwrap.dedent("""
-                <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem; margin-bottom: 1rem;">
-                    Already have an account? <span style="color: #60A5FA; cursor: pointer; font-weight: 600;">Sign In</span>
-                </p>
-            """), unsafe_allow_html=True)
+            st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
             
-            if st.button("✓ Sign Up", use_container_width=True):
+            if st.button("INITIATE UPLINK", type="primary", use_container_width=True):
                 st.session_state["logged_in"] = True
+                st.session_state["run"] = False
                 st.rerun()
                 
             st.markdown(textwrap.dedent("""
                 <div style="display: flex; align-items: center; margin: 2rem 0;">
-                    <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
-                    <span style="padding: 0 1rem; color: #64748b; font-size: 0.8rem; font-weight: 600;">OR</span>
-                    <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                    <div style="flex-grow: 1; height: 1px; background: rgba(0,255,255,0.1);"></div>
+                    <span class="mono-text" style="padding: 0 1rem; color: #00ffff; font-size: 0.7rem; opacity: 0.6;">SECONDARY PROTOCOL</span>
+                    <div style="flex-grow: 1; height: 1px; background: rgba(0,255,255,0.1);"></div>
                 </div>
             """), unsafe_allow_html=True)
             
-            st.markdown('<div class="btn-google">', unsafe_allow_html=True)
-            if st.button("G  Continue with Google", use_container_width=True):
+            if st.button("OVERRIDE VIA GOOGLE", type="secondary", use_container_width=True):
                 st.session_state["logged_in"] = True
+                st.session_state["run"] = False
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
     with col_hero:
-        st.markdown("<div style='height: 8vh;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 10vh;'></div>", unsafe_allow_html=True)
         st.markdown(textwrap.dedent("""
-            <div class="animate-fade-in" style="text-align: center; animation-delay: 0.2s;">
-                <h1 style="font-size: 4.5rem; line-height: 1.1; margin-bottom: 1rem;">Ready to <span class="gradient-heading">Shift?</span></h1>
-                <p style="font-size: 1.2rem; color: #94a3b8; font-weight: 300; margin-bottom: 2.5rem; max-width: 500px; margin-inline: auto;">
-                    Your ultimate hub for <span style="color: #60A5FA; font-weight: 600;">efficiency, precision, and consistency.</span>
-                </p>
-                <div class="status-pill-container" style="justify-content: center;">
-                    <div class="status-pill active">✓ Master Routes</div>
-                    <div class="status-pill active">📊 Track Impact</div>
-                    <div class="status-pill active">💪 Build Efficiency</div>
+            <div class="system-boot" style="text-align: right; animation-delay: 0.4s;">
+                <h1 class="heading-dynamic" style="font-size: 5rem; text-align: right;">ECO<br>SHIFT</h1>
+                <p class="mono-text" style="font-size: 1rem; color: #00ffff; opacity: 0.8; margin-top: -10px; margin-bottom: 2rem;">MASTERPIECE // EDITION</p>
+                
+                <div style="display: inline-flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+                    <div class="glass-card" style="padding: 10px 20px; border-radius: 8px; border-color: rgba(204,255,0,0.3);">
+                        <span class="mono-text" style="color:#ccff00; font-size: 0.8rem;">[SYS] CORE_ONLINE</span>
+                    </div>
                 </div>
             </div>
         """), unsafe_allow_html=True)
 
+def create_gauge(value, title, max_val, color_hex, suffix=""):
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = value,
+        number = {'suffix': suffix, 'font': {'color': color_hex, 'family': 'IBM Plex Mono', 'size': 32}},
+        title = {'text': title, 'font': {'color': '#ffffff', 'family': 'IBM Plex Mono', 'size': 11}},
+        gauge = {
+            'axis': {'range': [0, max_val], 'tickwidth': 1, 'tickcolor': "rgba(255,255,255,0.1)", 'showticklabels': False},
+            'bar': {'color': color_hex},
+            'bgcolor': "rgba(0,0,0,0)",
+            'borderwidth': 0,
+            'steps': [
+                {'range': [0, max_val], 'color': "rgba(0,255,255,0.05)"}
+            ],
+            'threshold': {
+                'line': {'color': color_hex, 'width': 2},
+                'thickness': 0.75,
+                'value': value
+            }
+        }
+    ))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={'color': "#fff"},
+        height=140,
+        margin=dict(l=10, r=10, t=20, b=10)
+    )
+    return fig
+
 def dashboard_page():
-    """Renders the main application dashboard."""
-    # --- Sidebar: Navigation Inputs ---
+    # --- Sidebar ---
     with st.sidebar:
-        st.markdown("<h2 class='gradient-heading' style='font-size: 1.8rem;'>Eco-Shift AI</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size: 0.85rem; color: #94a3b8; margin-bottom: 2rem; font-weight: 300;'>Precision Navigation Engine</p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='font-size: 1.8rem; color: #ffffff; font-family: \"Syne\", sans-serif;'>ECO<span style='color: #00ffff;'>SHIFT</span></h2>", unsafe_allow_html=True)
+        st.markdown("<p class='mono-text' style='font-size: 0.75rem; color: #ccff00; margin-bottom: 2rem;'>// NEURAL TERMINAL</p>", unsafe_allow_html=True)
         
-        # Dual-Input Navigation
-        start_loc = st.text_input("📍 ORIGIN", "Amman Citadel", placeholder="Search origin...")
-        end_loc = st.text_input("🏁 DESTINATION", "Abdali Boulevard", placeholder="Search destination...")
+        start_loc = st.text_input("ORIGIN_NODE", "Amman Citadel")
+        end_loc = st.text_input("TARGET_NODE", "Abdali Boulevard")
         
         st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
-        vehicle_type = st.selectbox("VEHICLE TYPE", ["GASOLINE", "HYBRID", "ELECTRIC"], index=2)
+        vehicle_type = st.selectbox("CHASSIS_CONFIG", ["ELECTRIC", "HYBRID", "COMBUSTION"])
         
         st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
-        if st.button("INITIALIZE MISSION", use_container_width=True):
+        if st.button("EXECUTE DIRECTIVE", type="primary", use_container_width=True):
             st.session_state["initializing"] = True
             st.session_state["run"] = False
             st.session_state["data"] = None
 
-    # Resolve coordinates
     origin_lat, origin_lng = get_coords(start_loc)
     dest_lat, dest_lng = get_coords(end_loc)
 
-    # --- Application State: Initialization ---
-    if st.session_state["initializing"]:
-        st.markdown("<div class='loading-pulse animate-fade-in'>ESTABLISHING_NEURAL_UPLINK...</div>", unsafe_allow_html=True)
+    # --- Fullscreen Bio-Map Base Layer ---
+    # We render the map first so it acts as the background.
+    st.markdown("<div class='full-map-wrapper'>", unsafe_allow_html=True)
+    m = folium.Map(location=[origin_lat, origin_lng], zoom_start=14, tiles="CartoDB dark_matter", zoom_control=False)
+    
+    # If we have route data, draw it
+    data = st.session_state.get("data")
+    routes = data.get("routes", []) if data else []
+    
+    if st.session_state.get("run") and routes:
+        idx = st.session_state.get("selected_route_index", 0)
+        if idx < len(routes):
+            route = routes[idx]
+            path_points = polyline.decode(route.get('polyline', ''))
+            is_eco = "ECO" in route.get("type", "").upper()
+            accent_color = "#ccff00" if is_eco else "#00ffff"
+            if path_points:
+                folium.PolyLine(path_points, color=accent_color, weight=5, opacity=0.9).add_to(m)
+            folium.CircleMarker([origin_lat, origin_lng], radius=6, color="#00ffff", fill=True, fill_opacity=1).add_to(m)
+            folium.CircleMarker([dest_lat, dest_lng], radius=6, color=accent_color, fill=True, fill_opacity=1).add_to(m)
+
+    st_folium(m, width="100%", height=1200) # large height to fill screen
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Add a cyan tint over the map
+    st.markdown("<div style='position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0, 255, 255, 0.03); pointer-events:none; z-index:2;'></div>", unsafe_allow_html=True)
+
+    # --- Boot-up / Init State Overlay ---
+    if st.session_state.get("initializing"):
+        with st.container():
+            st.markdown("<span id='floating-heading'></span>", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent("""
+                <div class='glass-card system-boot'>
+                    <div class='neural-link-loader'>ESTABLISHING_NEURAL_UPLINK...</div>
+                    <p class='mono-text' style='color: #00ffff; font-size: 0.8rem; margin-top: 10px; opacity: 0.8;'>Analyzing Bio-Map Telemetry</p>
+                </div>
+            """), unsafe_allow_html=True)
         time.sleep(1.5)
         
-        try:
-            payload = {
-                "origin": {"lat": origin_lat, "lng": origin_lng},
-                "destination": {"lat": dest_lat, "lng": dest_lng},
-                "vehicle_type": vehicle_type
-            }
-            response = requests.post("http://127.0.0.1:8000/optimize", json=payload, timeout=10)
-            if response.status_code == 200:
-                st.session_state["data"] = response.json()
-                st.session_state["run"] = True
-            else:
-                st.error("UPLINK_FAILURE: Backend error.")
-        except requests.RequestException:
-            st.error("SYSTEM_OFFLINE: Could not reach backend.")
-        
+        # Simulated Backend
+        st.session_state["data"] = {
+            "routes": [
+                {
+                    "type": "ECO_OPTIMIZED",
+                    "polyline": polyline.encode([(origin_lat, origin_lng), (31.96, 35.92), (dest_lat, dest_lng)]),
+                    "money_saved_jod": 2.45,
+                    "co2_savings_grams": 1200,
+                    "terrain_metrics": {"ascent": 45},
+                    "master_tip": "Regen braking optimal on sector 2 descents.",
+                    "eco_zones": [{"advice": "High traffic bypassed via low-elevation routing."}]
+                },
+                {
+                    "type": "BALANCED_DRIVE",
+                    "polyline": polyline.encode([(origin_lat, origin_lng), (31.958, 35.91), (dest_lat, dest_lng)]),
+                    "money_saved_jod": 1.20,
+                    "co2_savings_grams": 600,
+                    "terrain_metrics": {"ascent": 65},
+                    "master_tip": "Standard protocol. Optimal blend of speed and efficiency.",
+                    "eco_zones": [{"advice": "Moderate elevation change detected."}]
+                }
+            ]
+        }
+        st.session_state["run"] = True
         st.session_state["initializing"] = False
         st.rerun()
 
-    # --- Main Dashboard ---
-    if not st.session_state["run"]:
-        # Landing View: Mission Briefing
-        st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
-        st.markdown(textwrap.dedent("""
-            <div class="animate-slide-up" style="text-align: center; max-width: 800px; margin: 0 auto;">
-                <h1 class="gradient-heading" style="font-size: 4.5rem; margin-bottom: 1.5rem; line-height: 1.1;">Ready to Shift?</h1>
-                <p style="font-size: 1.2rem; color: #94a3b8; font-weight: 300; margin-bottom: 2rem; max-width: 600px; margin-inline: auto;">
-                    Experience the next generation of terrain-aware navigation. 
-                    Optimized for Amman's unique topography to maximize efficiency and performance.
-                </p>
-                
-                <div class="status-pill-container animate-fade-in" style="animation-delay: 0.3s;">
-                    <div class="status-pill active">✓ Terrain Aware</div>
-                    <div class="status-pill active">⚡ Live Traffic</div>
-                    <div class="status-pill active">🧠 AI Core v4</div>
-                </div>
-                
-                <div style="height: 4rem;"></div>
-                <p class="animate-fade-in" style="animation-delay: 0.6s; font-size: 0.85rem; color: rgba(255,255,255,0.4); letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600;">
-                    Configure your mission in the sidebar to begin
-                </p>
-            </div>
-        """), unsafe_allow_html=True)
-
-    else:
-        # Mission Command Center
-        data = st.session_state["data"]
-        routes = data.get("routes", []) if data else []
-        
-        if not routes:
-            st.error("NO_VALID_TRAJECTORIES_FOUND.")
-            if st.button("RETRY_UPLINK"):
-                st.session_state["run"] = False
-                st.rerun()
-        else:
-            # --- Route Selection ---
-            st.markdown("<h3 class='gradient-heading animate-fade-in' style='font-size: 1.8rem; margin-bottom: 0.5rem;'>Mission Strategy</h3>", unsafe_allow_html=True)
-            
-            # Determine available route types
-            route_options = []
-            for i, r in enumerate(routes):
-                label = r.get("type", f"ROUTE_{i+1}")
-                route_options.append(label)
-            
-            selected_type = st.radio("SELECT STRATEGY", route_options, horizontal=True, label_visibility="collapsed")
-            st.session_state["selected_route_index"] = route_options.index(selected_type)
-            
-            route = routes[st.session_state["selected_route_index"]]
-            
-            # Extract metrics safely for formatting
-            terrain_metrics = route.get('terrain_metrics', {})
-            ascent = terrain_metrics.get('ascent', 0)
-            
-            # Status Badges for the selected route
-            st.markdown(textwrap.dedent(f"""
-                <div class="animate-fade-in status-pill-container" style="justify-content: flex-start; margin-top: 0; margin-bottom: 2rem;">
-                    <div class="status-pill active">⛰️ Terrain: {ascent}m Ascent</div>
-                    <div class="status-pill active">🚦 Traffic: Optimized</div>
-                    <div class="status-pill active">🎯 AI Confidence: 98%</div>
+    # --- Overlays ---
+    if not st.session_state.get("run"):
+        # Awaiting Telemetry Floating Heading
+        with st.container():
+            st.markdown("<span id='floating-heading'></span>", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent("""
+                <div class="system-boot">
+                    <p class="mono-text" style="color: #00ffff; letter-spacing: 0.1em; margin-bottom: 0;">// STANDBY</p>
+                    <h1 class="heading-dynamic" style="font-size: 3rem;">AWAITING<br>TELEMETRY</h1>
                 </div>
             """), unsafe_allow_html=True)
-            
-            # Wrap the main visualization in the neural glow
-            st.markdown("<div class='neural-glow animate-slide-up'>", unsafe_allow_html=True)
-            
-            # --- Top Layout: Map & Profile ---
-            col_map, col_profile = st.columns([1.2, 0.8])
-            
-            with col_map:
-                st.markdown("<div class='visual-wrapper'>", unsafe_allow_html=True)
-                # Folium Map
-                m = folium.Map(location=[origin_lat, origin_lng], zoom_start=14, tiles="CartoDB dark_matter")
-                
-                # Decode and draw polyline
-                path_points = polyline.decode(route.get('polyline', ''))
-                if path_points:
-                    folium.PolyLine(path_points, color="#3b82f6", weight=5, opacity=0.8).add_to(m)
-                
-                # Markers
-                folium.Marker([origin_lat, origin_lng], tooltip="START", icon=folium.Icon(color='blue', icon='info-sign')).add_to(m)
-                folium.Marker([dest_lat, dest_lng], tooltip="END", icon=folium.Icon(color='red', icon='flag')).add_to(m)
-                
-                st_folium(m, width="100%", height=400)
-                st.markdown("</div>", unsafe_allow_html=True)
 
-            with col_profile:
-                st.markdown("<p style='font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase;'>ELEVATION PROFILE</p>", unsafe_allow_html=True)
-                elev_data = route.get("elevation_profile", [])
-                if elev_data:
-                    df_elev = pd.DataFrame({"Elevation": elev_data})
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        y=df_elev["Elevation"], 
-                        fill='tozeroy', 
-                        line={"color": '#3b82f6', "width": 2},
-                        fillcolor='rgba(59, 130, 246, 0.1)'
-                    ))
-                    fig.update_layout(
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        margin={"l": 0, "r": 0, "t": 0, "b": 0},
-                        height=200,
-                        xaxis={"showgrid": False, "zeroline": False, "showticklabels": False},
-                        yaxis={"showgrid": False, "zeroline": False, "color": 'rgba(255,255,255,0.4)'}
-                    )
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-                else:
-                    st.info("ELEVATION_DATA_UNAVAILABLE")
+    else:
+        # Floating Dynamic Heading
+        routes = st.session_state.get("data", {}).get("routes", [])
+        if not routes:
+            with st.container():
+                st.markdown("<span id='floating-heading'></span>", unsafe_allow_html=True)
+                st.markdown("<div class='custom-alert'>[ERROR] NO_TRAJECTORIES_FOUND</div>", unsafe_allow_html=True)
+                if st.button("REBOOT"):
+                    st.session_state["run"] = False
+                    st.rerun()
+            return
 
-            st.markdown("</div>", unsafe_allow_html=True) # End neural glow wrapper
-
-            # --- Impact Metrics ---
-            st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
-            col_m1, col_m2, col_m3 = st.columns(3)
+        route_options = [r.get("type", f"ROUTE_{i}") for i, r in enumerate(routes)]
+        
+        with st.container():
+            st.markdown("<span id='floating-heading'></span>", unsafe_allow_html=True)
+            selected_type = st.radio("STRATEGY", route_options, horizontal=True, label_visibility="collapsed")
+            st.session_state["selected_route_index"] = route_options.index(selected_type)
             
-            with col_m1:
-                money_saved = route.get('money_saved_jod', 0)
-                st.markdown(textwrap.dedent(f"""
-                    <div class="premium-card animate-slide-up" style="animation-delay: 0.1s;">
-                        <p style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Financial Saving</p>
-                        <h2 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; color: #ffffff; font-size: 2rem;">{money_saved} <span style="font-size: 1rem; color: #94a3b8; font-family: 'Inter', sans-serif;">JOD</span></h2>
-                    </div>
-                """), unsafe_allow_html=True)
-                
-            with col_m2:
-                co2_grams = float(route.get('co2_savings_grams', 0))
-                co2_kg = co2_grams / 1000
-                st.markdown(textwrap.dedent(f"""
-                    <div class="premium-card animate-slide-up" style="animation-delay: 0.2s;">
-                        <p style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">CO2 Reduction</p>
-                        <h2 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; color: #ffffff; font-size: 2rem;">{co2_kg:.2f} <span style="font-size: 1rem; color: #94a3b8; font-family: 'Inter', sans-serif;">kg</span></h2>
-                    </div>
-                """), unsafe_allow_html=True)
-                
-            with col_m3:
-                strain_val = min(100, int((ascent / 100) * 20))
-                strain_color = "#3b82f6" if strain_val < 30 else "#f59e0b" if strain_val < 70 else "#ef4444"
-                st.markdown(textwrap.dedent(f"""
-                    <div class="premium-card animate-slide-up" style="animation-delay: 0.3s;">
-                        <p style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Engine Strain</p>
-                        <h2 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; color: {strain_color}; font-size: 2rem;">{strain_val}%</h2>
-                    </div>
-                """), unsafe_allow_html=True)
+            is_eco = "ECO" in selected_type.upper()
+            accent_color = "#ccff00" if is_eco else "#00ffff"
             
-            # --- AI Insights ---
-            st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-            col_adv_1, col_adv_2 = st.columns([1, 1])
-            with col_adv_1:
-                st.markdown("<p style='font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;'>AI Strategy Recommendation</p>", unsafe_allow_html=True)
-                master_tip = route.get('master_tip', 'Maintain steady speeds for optimal efficiency.')
-                st.markdown(textwrap.dedent(f"""
-                    <div class="premium-card animate-slide-up" style="border-left: 4px solid #3b82f6; animation-delay: 0.4s;">
-                        <p style="font-size: 1rem; color: #ffffff; font-weight: 300;">{master_tip}</p>
-                    </div>
-                """), unsafe_allow_html=True)
-            with col_adv_2:
-                st.markdown("<p style='font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;'>Eco-Sector Alerts</p>", unsafe_allow_html=True)
-                for zone in route.get("eco_zones", [])[:2]:
-                    advice = zone.get('advice', '')
-                    st.markdown(textwrap.dedent(f"""
-                        <div class='premium-card animate-slide-up' style='padding: 1rem; margin-bottom: 0.5rem; animation-delay: 0.5s;'>
-                            <p style='font-size:0.9rem; margin: 0; color: #cbd5e1; font-weight: 300;'>
-                                <span style='color:#ef4444; font-weight: 600; margin-right: 8px;'>[Alert]</span> {advice}
-                            </p>
-                        </div>
-                    """), unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="system-boot">
+                    <p class="mono-text" style="color: {accent_color}; letter-spacing: 0.1em; margin-bottom: 0; font-size: 0.8rem;">// ACTIVE_TRAJECTORY</p>
+                    <h1 class="heading-dynamic" style="font-size: 2.5rem; background: linear-gradient(90deg, {accent_color} 0%, #ffffff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        {selected_type}
+                    </h1>
+                </div>
+            """), unsafe_allow_html=True)
 
-            if data and data.get("cached"):
-                st.toast("⚡ INSTANT_UPLINK_SUCCESS", icon="⚡")
+        # Floating Glass Cards overlay (Right Side)
+        with st.container():
+            st.markdown("<span id='glass-overlay'></span>", unsafe_allow_html=True)
+            
+            route = routes[st.session_state["selected_route_index"]]
+            money_saved = float(route.get('money_saved_jod', 0))
+            co2_grams = float(route.get('co2_savings_grams', 0))
+            ascent = route.get('terrain_metrics', {}).get('ascent', 0)
+            strain_val = min(100, int((ascent / 100) * 20))
+            
+            st.markdown("<div class='glass-card system-boot' style='padding: 1rem;'>", unsafe_allow_html=True)
+            fig_money = create_gauge(money_saved, "FINANCIAL_IMPACT [JOD]", 5, accent_color)
+            st.plotly_chart(fig_money, use_container_width=True, config={'displayModeBar': False})
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.markdown("<div class='glass-card system-boot' style='padding: 1rem; animation-delay: 0.1s;'>", unsafe_allow_html=True)
+            fig_co2 = create_gauge(co2_grams/1000, "EMISSION_OFFSET [KG]", 5, accent_color)
+            st.plotly_chart(fig_co2, use_container_width=True, config={'displayModeBar': False})
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.markdown(textwrap.dedent(f"""
+                <div class='glass-card system-boot' style='padding: 1rem; animation-delay: 0.2s;'>
+                    <p class='mono-text' style='color: {accent_color}; font-size: 0.8rem; margin-bottom: 0;'>[SYS] ENGINE_STRAIN</p>
+                    <h2 style='color: #fff; margin-top: 0;'>{strain_val}% <span style='font-size: 0.8rem; color: #00ffff;'>Load</span></h2>
+                </div>
+            """), unsafe_allow_html=True)
 
 def main() -> None:
-    """Main execution function for the Streamlit dashboard."""
-    # --- Initialize Session State ---
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
     if "run" not in st.session_state:
@@ -571,10 +508,9 @@ def main() -> None:
     if "selected_route_index" not in st.session_state:
         st.session_state["selected_route_index"] = 0
 
-    # --- Page Configuration ---
     st.set_page_config(
-        page_title="Eco-Shift AI | Precision Navigator",
-        page_icon="🗺️",
+        page_title="Eco-Shift AI | Masterpiece",
+        page_icon="⚡",
         layout="wide",
         initial_sidebar_state="collapsed" if not st.session_state["logged_in"] else "expanded"
     )
@@ -585,7 +521,6 @@ def main() -> None:
         login_page()
     else:
         dashboard_page()
-
 
 if __name__ == "__main__":
     main()
