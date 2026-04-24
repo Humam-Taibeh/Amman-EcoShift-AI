@@ -5,6 +5,7 @@ Handles UI layout, map rendering, and backend interaction.
 
 import time
 import requests
+import textwrap
 import pandas as pd
 import folium
 import polyline
@@ -23,28 +24,8 @@ def get_coords(location_name: str) -> tuple[float, float]:
     """Return coordinates for a given location string."""
     return LOCATIONS.get(location_name, LOCATIONS["Default"])
 
-def main() -> None:
-    """Main execution function for the Streamlit dashboard."""
-    # --- Page Configuration ---
-    st.set_page_config(
-        page_title="Eco-Shift AI | Precision Navigator",
-        page_icon="🗺️",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-
-    # --- Initialize Session State ---
-    if "run" not in st.session_state:
-        st.session_state["run"] = False
-    if "data" not in st.session_state:
-        st.session_state["data"] = None
-    if "initializing" not in st.session_state:
-        st.session_state["initializing"] = False
-    if "selected_route_index" not in st.session_state:
-        st.session_state["selected_route_index"] = 0
-
-    # --- Premium SaaS Design System ---
-    css_styles = """
+def inject_global_css():
+    css = textwrap.dedent("""
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         /* Hide all standard Streamlit elements */
@@ -159,6 +140,21 @@ def main() -> None:
             border: none !important;
         }
 
+        /* Specific Button styles for Login */
+        .btn-google > button {
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            box-shadow: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-google > button:hover {
+            background: rgba(255,255,255,0.1) !important;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1) !important;
+        }
+
         /* Status Pills */
         .status-pill-container {
             display: flex;
@@ -271,9 +267,80 @@ def main() -> None:
             to { background-position: 200% center; }
         }
     </style>
-    """
-    st.markdown(css_styles, unsafe_allow_html=True)
+    """)
+    st.markdown(css, unsafe_allow_html=True)
 
+
+def login_page():
+    """Renders the login UI mirroring the reference image."""
+    st.markdown(textwrap.dedent("""
+    <style>
+        [data-testid="collapsedControl"] { display: none !important; }
+        [data-testid="stSidebar"] { display: none !important; }
+    </style>
+    """), unsafe_allow_html=True)
+    
+    st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
+    
+    col_form, col_space, col_hero = st.columns([1, 0.2, 1.2])
+    
+    with col_form:
+        st.markdown(textwrap.dedent("""
+            <div class="animate-slide-up" style="max-width: 400px; margin: 0 auto;">
+                <h2 style="font-size: 2rem; margin-bottom: 0.5rem; color: #ffffff;">🚀 The Journey Begins Here</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 2.5rem; font-weight: 300;">Create your account and start your path to greatness.</p>
+            </div>
+        """), unsafe_allow_html=True)
+        
+        # We wrap inputs in a container to center them perfectly matching the 400px max-width
+        with st.container():
+            st.markdown("<div style='max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
+            email = st.text_input("📧 Email address", placeholder="name@company.com")
+            password = st.text_input("🔒 Password", type="password", placeholder="••••••••")
+            
+            st.markdown(textwrap.dedent("""
+                <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem; margin-bottom: 1rem;">
+                    Already have an account? <span style="color: #60A5FA; cursor: pointer; font-weight: 600;">Sign In</span>
+                </p>
+            """), unsafe_allow_html=True)
+            
+            if st.button("✓ Sign Up", use_container_width=True):
+                st.session_state["logged_in"] = True
+                st.rerun()
+                
+            st.markdown(textwrap.dedent("""
+                <div style="display: flex; align-items: center; margin: 2rem 0;">
+                    <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                    <span style="padding: 0 1rem; color: #64748b; font-size: 0.8rem; font-weight: 600;">OR</span>
+                    <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                </div>
+            """), unsafe_allow_html=True)
+            
+            st.markdown('<div class="btn-google">', unsafe_allow_html=True)
+            if st.button("G  Continue with Google", use_container_width=True):
+                st.session_state["logged_in"] = True
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    with col_hero:
+        st.markdown("<div style='height: 8vh;'></div>", unsafe_allow_html=True)
+        st.markdown(textwrap.dedent("""
+            <div class="animate-fade-in" style="text-align: center; animation-delay: 0.2s;">
+                <h1 style="font-size: 4.5rem; line-height: 1.1; margin-bottom: 1rem;">Ready to <span class="gradient-heading">Shift?</span></h1>
+                <p style="font-size: 1.2rem; color: #94a3b8; font-weight: 300; margin-bottom: 2.5rem; max-width: 500px; margin-inline: auto;">
+                    Your ultimate hub for <span style="color: #60A5FA; font-weight: 600;">efficiency, precision, and consistency.</span>
+                </p>
+                <div class="status-pill-container" style="justify-content: center;">
+                    <div class="status-pill active">✓ Master Routes</div>
+                    <div class="status-pill active">📊 Track Impact</div>
+                    <div class="status-pill active">💪 Build Efficiency</div>
+                </div>
+            </div>
+        """), unsafe_allow_html=True)
+
+def dashboard_page():
+    """Renders the main application dashboard."""
     # --- Sidebar: Navigation Inputs ---
     with st.sidebar:
         st.markdown("<h2 class='gradient-heading' style='font-size: 1.8rem;'>Eco-Shift AI</h2>", unsafe_allow_html=True)
@@ -323,7 +390,7 @@ def main() -> None:
     if not st.session_state["run"]:
         # Landing View: Mission Briefing
         st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
             <div class="animate-slide-up" style="text-align: center; max-width: 800px; margin: 0 auto;">
                 <h1 class="gradient-heading" style="font-size: 4.5rem; margin-bottom: 1.5rem; line-height: 1.1;">Ready to Shift?</h1>
                 <p style="font-size: 1.2rem; color: #94a3b8; font-weight: 300; margin-bottom: 2rem; max-width: 600px; margin-inline: auto;">
@@ -342,7 +409,7 @@ def main() -> None:
                     Configure your mission in the sidebar to begin
                 </p>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     else:
         # Mission Command Center
@@ -374,13 +441,13 @@ def main() -> None:
             ascent = terrain_metrics.get('ascent', 0)
             
             # Status Badges for the selected route
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
                 <div class="animate-fade-in status-pill-container" style="justify-content: flex-start; margin-top: 0; margin-bottom: 2rem;">
                     <div class="status-pill active">⛰️ Terrain: {ascent}m Ascent</div>
                     <div class="status-pill active">🚦 Traffic: Optimized</div>
                     <div class="status-pill active">🎯 AI Confidence: 98%</div>
                 </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             
             # Wrap the main visualization in the neural glow
             st.markdown("<div class='neural-glow animate-slide-up'>", unsafe_allow_html=True)
@@ -437,32 +504,32 @@ def main() -> None:
             
             with col_m1:
                 money_saved = route.get('money_saved_jod', 0)
-                st.markdown(f"""
+                st.markdown(textwrap.dedent(f"""
                     <div class="premium-card animate-slide-up" style="animation-delay: 0.1s;">
                         <p style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Financial Saving</p>
                         <h2 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; color: #ffffff; font-size: 2rem;">{money_saved} <span style="font-size: 1rem; color: #94a3b8; font-family: 'Inter', sans-serif;">JOD</span></h2>
                     </div>
-                """, unsafe_allow_html=True)
+                """), unsafe_allow_html=True)
                 
             with col_m2:
                 co2_grams = float(route.get('co2_savings_grams', 0))
                 co2_kg = co2_grams / 1000
-                st.markdown(f"""
+                st.markdown(textwrap.dedent(f"""
                     <div class="premium-card animate-slide-up" style="animation-delay: 0.2s;">
                         <p style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">CO2 Reduction</p>
                         <h2 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; color: #ffffff; font-size: 2rem;">{co2_kg:.2f} <span style="font-size: 1rem; color: #94a3b8; font-family: 'Inter', sans-serif;">kg</span></h2>
                     </div>
-                """, unsafe_allow_html=True)
+                """), unsafe_allow_html=True)
                 
             with col_m3:
                 strain_val = min(100, int((ascent / 100) * 20))
                 strain_color = "#3b82f6" if strain_val < 30 else "#f59e0b" if strain_val < 70 else "#ef4444"
-                st.markdown(f"""
+                st.markdown(textwrap.dedent(f"""
                     <div class="premium-card animate-slide-up" style="animation-delay: 0.3s;">
                         <p style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Engine Strain</p>
                         <h2 style="margin: 0; font-family: 'Syne', sans-serif; font-weight: 700; color: {strain_color}; font-size: 2rem;">{strain_val}%</h2>
                     </div>
-                """, unsafe_allow_html=True)
+                """), unsafe_allow_html=True)
             
             # --- AI Insights ---
             st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
@@ -470,17 +537,55 @@ def main() -> None:
             with col_adv_1:
                 st.markdown("<p style='font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;'>AI Strategy Recommendation</p>", unsafe_allow_html=True)
                 master_tip = route.get('master_tip', 'Maintain steady speeds for optimal efficiency.')
-                st.markdown(f"""<div class="premium-card animate-slide-up" style="border-left: 4px solid #3b82f6; animation-delay: 0.4s;">
-                    <p style="font-size: 1rem; color: #ffffff; font-weight: 300;">{master_tip}</p>
-                </div>""", unsafe_allow_html=True)
+                st.markdown(textwrap.dedent(f"""
+                    <div class="premium-card animate-slide-up" style="border-left: 4px solid #3b82f6; animation-delay: 0.4s;">
+                        <p style="font-size: 1rem; color: #ffffff; font-weight: 300;">{master_tip}</p>
+                    </div>
+                """), unsafe_allow_html=True)
             with col_adv_2:
                 st.markdown("<p style='font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;'>Eco-Sector Alerts</p>", unsafe_allow_html=True)
                 for zone in route.get("eco_zones", [])[:2]:
                     advice = zone.get('advice', '')
-                    st.markdown(f"<div class='premium-card animate-slide-up' style='padding: 1rem; margin-bottom: 0.5rem; animation-delay: 0.5s;'><p style='font-size:0.9rem; margin: 0; color: #cbd5e1; font-weight: 300;'><span style='color:#ef4444; font-weight: 600; margin-right: 8px;'>[Alert]</span> {advice}</p></div>", unsafe_allow_html=True)
+                    st.markdown(textwrap.dedent(f"""
+                        <div class='premium-card animate-slide-up' style='padding: 1rem; margin-bottom: 0.5rem; animation-delay: 0.5s;'>
+                            <p style='font-size:0.9rem; margin: 0; color: #cbd5e1; font-weight: 300;'>
+                                <span style='color:#ef4444; font-weight: 600; margin-right: 8px;'>[Alert]</span> {advice}
+                            </p>
+                        </div>
+                    """), unsafe_allow_html=True)
 
             if data and data.get("cached"):
                 st.toast("⚡ INSTANT_UPLINK_SUCCESS", icon="⚡")
+
+def main() -> None:
+    """Main execution function for the Streamlit dashboard."""
+    # --- Initialize Session State ---
+    if "logged_in" not in st.session_state:
+        st.session_state["logged_in"] = False
+    if "run" not in st.session_state:
+        st.session_state["run"] = False
+    if "data" not in st.session_state:
+        st.session_state["data"] = None
+    if "initializing" not in st.session_state:
+        st.session_state["initializing"] = False
+    if "selected_route_index" not in st.session_state:
+        st.session_state["selected_route_index"] = 0
+
+    # --- Page Configuration ---
+    st.set_page_config(
+        page_title="Eco-Shift AI | Precision Navigator",
+        page_icon="🗺️",
+        layout="wide",
+        initial_sidebar_state="collapsed" if not st.session_state["logged_in"] else "expanded"
+    )
+
+    inject_global_css()
+
+    if not st.session_state["logged_in"]:
+        login_page()
+    else:
+        dashboard_page()
+
 
 if __name__ == "__main__":
     main()
